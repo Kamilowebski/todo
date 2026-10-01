@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zadania – lista TODO do pracy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { page: '#f4f7f9' } } } }
+  </script>
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; }
+    .task-done .t-title { text-decoration: line-through; color: #94a3b8; }
+  </style>
+</head>
+<body class="min-h-screen bg-page text-slate-800 antialiased">
+  <div class="max-w-6xl mx-auto px-4 py-8 space-y-6">
+
+    <!-- Nagłówek -->
+    <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold text-slate-800">Zadania</h1>
+        <p id="today" class="mt-1 text-sm text-slate-500"></p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button id="export" type="button" class="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-slate-700 border border-slate-300 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14"/></svg>
+          Eksportuj
+        </button>
+        <button id="import" type="button" class="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-slate-700 border border-slate-300 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V5m0 0l-4 4m4-4l4 4M5 20h14"/></svg>
+          Importuj
+        </button>
+        <button id="clear-done" type="button" class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 12a1 1 0 001 1h8a1 1 0 001-1l1-12M9 7V4h6v3"/></svg>
+          Usuń zrobione
+        </button>
+        <input id="import-file" type="file" accept="application/json" class="hidden">
+      </div>
+    </header>
+
+    <!-- Postęp -->
+    <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="flex items-baseline justify-between text-sm">
+        <span id="progress-label" class="font-medium text-slate-800"></span>
+        <span id="progress-pct" class="text-slate-500"></span>
+      </div>
+      <div class="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+        <div id="progress-bar" class="h-full rounded-full bg-blue-600 transition-all duration-300" style="width:0%"></div>
+      </div>
+      <div id="stats" class="mt-4 flex flex-wrap gap-2"></div>
+    </section>
+
+    <!-- Dodawanie -->
+    <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <form id="add-form" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-12">
+        <div class="sm:col-span-2 lg:col-span-6">
+          <label for="new-title" class="block text-sm font-medium text-slate-700 mb-1">Nowe zadanie</label>
+          <input id="new-title" type="text" required maxlength="200" autocomplete="off" placeholder="Co trzeba zrobić?"
+            class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none">
+        </div>
+        <div class="lg:col-span-2">
+          <label for="new-prio" class="block text-sm font-medium text-slate-700 mb-1">Priorytet</label>
+          <select id="new-prio" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none">
+            <option value="high">Pilne</option>
+            <option value="normal" selected>Zwykłe</option>
+            <option value="low">Kiedyś</option>
+          </select>
+        </div>
+        <div class="lg:col-span-2">
+          <label for="new-due" class="block text-sm font-medium text-slate-700 mb-1">Termin</label>
+          <input id="new-due" type="date" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none">
+        </div>
+        <div class="flex items-end sm:col-span-2 lg:col-span-2">
+          <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Dodaj
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Lista -->
+    <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div id="filters" class="flex flex-wrap gap-2">
+          <button type="button" data-filter="all">Wszystkie</button>
+          <button type="button" data-filter="active">Do zrobienia</button>
+          <button type="button" data-filter="done">Zrobione</button>
+        </div>
+        <div class="sm:w-64">
+          <label for="search" class="sr-only">Szukaj</label>
+          <input id="search" type="search" placeholder="Szukaj zadania…"
+            class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none">
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-slate-50 text-xs uppercase text-slate-500">
+            <tr>
+              <th class="w-10 px-4 py-3"><span class="sr-only">Status</span></th>
+              <th class="px-4 py-3 font-medium">Zadanie</th>
+              <th class="hidden px-4 py-3 font-medium sm:table-cell">Priorytet</th>
+              <th class="hidden px-4 py-3 font-medium sm:table-cell">Termin</th>
+              <th class="w-24 px-4 py-3"><span class="sr-only">Akcje</span></th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div id="empty" class="hidden m-4 rounded-xl border border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500"></div>
+    </section>
+
+    <p class="text-xs text-slate-500">Dane są zapisane tylko w tej przeglądarce. Do przeniesienia na inny komputer użyj eksportu i importu.</p>
+  </div>
+
+  <!-- Modal: edycja zadania -->
+  <div id="edit-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 p-4" role="dialog" aria-modal="true" aria-labelledby="edit-heading">
+    <form id="edit-form" class="w-full max-w-md space-y-4 rounded-xl bg-white p-6 shadow-xl">
+      <h2 id="edit-heading" class="text-lg font-semibold text-slate-800">Edytuj zadanie</h2>
+      <div>
+        <label for="edit-title" class="block text-sm font-medium text-slate-700 mb-1">Zadanie</label>
+        <input id="edit-title" type="text" required maxlength="200" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none">
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label for="edit-prio" class="block text-sm font-medium text-slate-700 mb-1">Priorytet</label>
+          <select id="edit-prio" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none">
+            <option value="high">Pilne</option>
+            <option value="normal">Zwykłe</option>
+            <option value="low">Kiedyś</option>
+          </select>
+        </div>
+        <div>
+          <label for="edit-due" class="block text-sm font-medium text-slate-700 mb-1">Termin</label>
+          <input id="edit-due" type="date" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none">
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" data-close class="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-slate-700 border border-slate-300 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">Anuluj</button>
+        <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">Zapisz</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Modal: potwierdzenie -->
+  <div id="confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 p-4" role="dialog" aria-modal="true" aria-labelledby="confirm-heading">
+    <div class="w-full max-w-md space-y-4 rounded-xl bg-white p-6 shadow-xl">
+      <h2 id="confirm-heading" class="text-lg font-semibold text-slate-800"></h2>
+      <p id="confirm-text" class="text-sm text-slate-500"></p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" data-close class="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-slate-700 border border-slate-300 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">Anuluj</button>
+        <button id="confirm-ok" type="button" class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">Potwierdź</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Stałe i klucze localStorage ---
+    const STORAGE_KEY = 'todo-praca-v1';
+    const BADGE = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium';
+    const PRIO = {
+      high:   { label: 'Pilne',  order: 0, color: 'bg-red-50 text-red-700' },
+      normal: { label: 'Zwykłe', order: 1, color: 'bg-sky-50 text-sky-700' },
+      low:    { label: 'Kiedyś', order: 2, color: 'bg-slate-100 text-slate-600' }
+    };
+    // Klasy przycisków filtrów (te same co przyciski główny / drugorzędny)
+    const BTN = 'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ';
+    const BTN_PRIMARY = BTN + 'bg-blue-600 text-white hover:bg-blue-700';
+    const BTN_SECONDARY = BTN + 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50';
+    const ICON_EDIT = '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.1 2.1 0 00-4-4L4 16v4zM14 6l4 4"/></svg>';
+    const ICON_TRASH = '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 12a1 1 0 001 1h8a1 1 0 001-1l1-12M9 7V4h6v3"/></svg>';
+
+    // --- Stan ---
+    let tasks = load();
+    let filter = 'all';
+    let query = '';
+    let editingId = null;
+    let onConfirm = null;
+
+    const $ = (s) => document.querySelector(s);
+
+    // --- Pamięć lokalna ---
+    function load() {
+      try { const d = JSON.parse(localStorage.getItem(STORAGE_KEY)); return Array.isArray(d) ? d : []; }
+      catch { return []; }
+    }
+    function save() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); } catch { /* brak dostępu do storage */ }
+    }
+    try { localStorage.removeItem('todo-theme'); } catch {} // sprzątanie po starym przełączniku motywu
+
+    // --- Pomocnicze ---
+    const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    function isoToday() {
+      const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      return d.toISOString().slice(0, 10);
+    }
+    function shortDate(iso) {
+      return new Date(iso).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+    }
+    const prioBadge = (t) => `<span class="${BADGE} ${PRIO[t.prio].color}">${PRIO[t.prio].label}</span>`;
+
+    // Termin: po terminie = czerwony, dziś = bursztynowy, reszta = szary tekst
+    function dueHtml(t) {
+      if (!t.due) return '';
+      const today = isoToday();
+      if (!t.done && t.due < today) return `<span class="${BADGE} bg-red-50 text-red-700">Po terminie · ${shortDate(t.due)}</span>`;
+      if (!t.done && t.due === today) return `<span class="${BADGE} bg-amber-50 text-amber-700">Dziś</span>`;
+      return `<span class="text-slate-500">${shortDate(t.due)}</span>`;
+    }
+
+    // --- Modale (Esc zamyka) ---
+    function openModal(el) { el.classList.remove('hidden'); el.classList.add('flex'); }
+    function closeModals() {
+      document.querySelectorAll('#edit-modal, #confirm-modal').forEach(m => { m.classList.add('hidden'); m.classList.remove('flex'); });
+      editingId = null; onConfirm = null;
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModals(); });
+    document.querySelectorAll('#edit-modal, #confirm-modal').forEach(m => {
+      m.addEventListener('click', e => { if (e.target === m || e.target.closest('[data-close]')) closeModals(); });
+    });
+    function askConfirm(title, text, label, fn) {
+      $('#confirm-heading').textContent = title;
+      $('#confirm-text').textContent = text;
+      $('#confirm-ok').textContent = label;
+      onConfirm = fn;
+      openModal($('#confirm-modal'));
+    }
+    $('#confirm-ok').addEventListener('click', () => { const fn = onConfirm; closeModals(); if (fn) fn(); });
+
+    // --- Widok ---
+    function visibleTasks() {
+      const key = (t) => t.due || '9999-99-99';
+      return tasks
+        .filter(t => filter === 'all' || (filter === 'done' ? t.done : !t.done))
+        .filter(t => t.title.toLowerCase().includes(query))
+        .sort((a, b) =>
+          (a.done - b.done) ||
+          (PRIO[a.prio].order - PRIO[b.prio].order) ||
+          (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0) ||
+          (b.created - a.created));
+    }
+
+    function render() {
+      // postęp i liczniki
+      const total = tasks.length, done = tasks.filter(t => t.done).length, today = isoToday();
+      const open = tasks.filter(t => !t.done);
+      const overdue = open.filter(t => t.due && t.due < today).length;
+      const dueToday = open.filter(t => t.due === today).length;
+      const pct = total ? Math.round(done / total * 100) : 0;
+      $('#progress-label').textContent = total ? `${done} z ${total} zrobione` : 'Brak zadań';
+      $('#progress-pct').textContent = total ? pct + '%' : '';
+      $('#progress-bar').style.width = pct + '%';
+      $('#stats').innerHTML =
+        `<span class="${BADGE} bg-sky-50 text-sky-700">Do zrobienia: ${open.length}</span>` +
+        (dueToday ? `<span class="${BADGE} bg-amber-50 text-amber-700">Na dziś: ${dueToday}</span>` : '') +
+        (overdue ? `<span class="${BADGE} bg-red-50 text-red-700">Po terminie: ${overdue}</span>` : '') +
+        (done ? `<span class="${BADGE} bg-emerald-50 text-emerald-700">Zrobione: ${done}</span>` : '');
+
+      // filtry
+      document.querySelectorAll('#filters button').forEach(b => {
+        b.className = b.dataset.filter === filter ? BTN_PRIMARY : BTN_SECONDARY;
+      });
+
+      // wiersze
+      const items = visibleTasks();
+      $('#rows').innerHTML = items.map(t => `
+        <tr data-id="${esc(t.id)}" class="border-b border-slate-100 hover:bg-slate-50 ${t.done ? 'task-done' : ''}">
+          <td class="px-4 py-3 align-top">
+            <input type="checkbox" data-act="toggle" ${t.done ? 'checked' : ''} aria-label="Oznacz jako zrobione"
+              class="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+          </td>
+          <td class="px-4 py-3 align-top">
+            <div class="t-title break-words text-slate-800">${esc(t.title)}</div>
+            <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs sm:hidden">${prioBadge(t)}${dueHtml(t)}</div>
+          </td>
+          <td class="hidden px-4 py-3 align-top sm:table-cell">${prioBadge(t)}</td>
+          <td class="hidden px-4 py-3 align-top text-xs sm:table-cell">${dueHtml(t)}</td>
+          <td class="px-4 py-2 align-top">
+            <div class="flex justify-end gap-1">
+              <button type="button" data-act="edit" aria-label="Edytuj" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">${ICON_EDIT}</button>
+              <button type="button" data-act="delete" aria-label="Usuń" class="rounded-lg p-2 text-slate-500 hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-blue-500">${ICON_TRASH}</button>
+            </div>
+          </td>
+        </tr>`).join('');
+
+      // pusty stan
+      const msg = !tasks.length ? 'Lista jest pusta. Dodaj pierwsze zadanie powyżej.'
+        : !items.length ? (query ? 'Nic nie pasuje do wyszukiwania.' : filter === 'done' ? 'Nic jeszcze nie zrobiono.' : 'Wszystko zrobione.')
+        : '';
+      $('#empty').textContent = msg;
+      $('#empty').classList.toggle('hidden', !msg);
+    }
+
+    // --- Dodawanie ---
+    $('#add-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const title = $('#new-title').value.trim();
+      if (!title) return;
+      tasks.push({
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
+        title, prio: $('#new-prio').value, due: $('#new-due').value || '', done: false, created: Date.now()
+      });
+      save();
+      $('#new-title').value = ''; $('#new-due').value = ''; $('#new-prio').value = 'normal';
+      $('#new-title').focus();
+      render();
+    });
+
+    // --- Akcje w wierszach ---
+    $('#rows').addEventListener('click', e => {
+      const el = e.target.closest('[data-act]');
+      if (!el) return;
+      const id = el.closest('tr').dataset.id;
+      const t = tasks.find(x => x.id === id);
+      if (!t) return;
+      if (el.dataset.act === 'toggle') { t.done = !t.done; save(); render(); }
+      if (el.dataset.act === 'delete') { tasks = tasks.filter(x => x.id !== id); save(); render(); }
+      if (el.dataset.act === 'edit') {
+        editingId = id;
+        $('#edit-title').value = t.title; $('#edit-prio').value = t.prio; $('#edit-due').value = t.due || '';
+        openModal($('#edit-modal')); $('#edit-title').focus();
+      }
+    });
+
+    // --- Zapis edycji ---
+    $('#edit-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const t = tasks.find(x => x.id === editingId);
+      const title = $('#edit-title').value.trim();
+      if (t && title) { t.title = title; t.prio = $('#edit-prio').value; t.due = $('#edit-due').value || ''; save(); }
+      closeModals(); render();
+    });
+
+    // --- Filtry i szukanie ---
+    $('#filters').addEventListener('click', e => {
+      const b = e.target.closest('[data-filter]'); if (!b) return;
+      filter = b.dataset.filter; render();
+    });
+    $('#search').addEventListener('input', e => { query = e.target.value.trim().toLowerCase(); render(); });
+
+    // --- Usuwanie zrobionych ---
+    $('#clear-done').addEventListener('click', () => {
+      const n = tasks.filter(t => t.done).length;
+      if (!n) return;
+      askConfirm('Usunąć zrobione zadania?', `Zostanie usuniętych zadań: ${n}. Tej operacji nie można cofnąć.`, 'Usuń', () => {
+        tasks = tasks.filter(t => !t.done); save(); render();
+      });
+    });
+
+    // --- Eksport / import ---
+    $('#export').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(tasks, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `zadania-${isoToday()}.json`;
+      a.click(); URL.revokeObjectURL(a.href);
+    });
+    $('#import').addEventListener('click', () => $('#import-file').click());
+    $('#import-file').addEventListener('change', async e => {
+      const file = e.target.files[0]; if (!file) return;
+      try {
+        const data = JSON.parse(await file.text());
+        if (!Array.isArray(data)) throw new Error();
+        const clean = data.filter(t => t && typeof t.title === 'string').map(t => ({
+          id: String(t.id || Date.now() + Math.random()), title: t.title.slice(0, 200),
+          prio: PRIO[t.prio] ? t.prio : 'normal', due: t.due || '', done: !!t.done, created: t.created || Date.now()
+        }));
+        askConfirm('Zastąpić obecną listę?', `Lista zostanie zastąpiona zadaniami z pliku (${clean.length}).`, 'Zastąp', () => {
+          tasks = clean; save(); render();
+        });
+      } catch {
+        askConfirm('Nie udało się wczytać pliku', 'Wybierz plik JSON wyeksportowany z tej strony.', 'OK', null);
+      }
+      e.target.value = '';
+    });
+
+    // --- Start ---
+    $('#today').textContent = new Date().toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
+    render();
+  </script>
+</body>
+</html>

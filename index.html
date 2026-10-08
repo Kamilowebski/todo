@@ -39,6 +39,7 @@
           Usuń zrobione
         </button>
         <input id="import-file" type="file" accept="application/json" class="hidden">
+        <div id="hub-apps"></div>
       </div>
     </header>
 
@@ -383,5 +384,6 @@
     $('#today').textContent = new Date().toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
     render();
   </script>
+  <script src="https://kamilowebski.github.io/hub/apps.js"></script>
 </body>
 </html>

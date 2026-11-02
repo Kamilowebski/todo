@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lista zadań</title>
+<meta name="theme-color" content="#f4f7f9">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="ikony/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="ikony/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="ikony/favicon-16.png">
+<link rel="apple-touch-icon" href="ikony/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Zadania">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: { colors: { page: '#f4f7f9' } } }
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body class="bg-page text-slate-800 min-h-screen">
+
+<div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+
+  <!-- Nagłówek -->
+  <header class="flex items-center justify-between gap-3">
+    <div class="min-w-0">
+      <h1 class="text-2xl font-semibold">Lista zadań</h1>
+      <p id="uzytkownik" class="text-sm text-slate-500 truncate" hidden></p>
+    </div>
+    <div class="flex items-center gap-2">
+      <!-- Przycisk-wafel: przejście do innych stron -->
+      <div class="relative">
+        <button id="waffle-btn" type="button" aria-label="Moje strony" aria-expanded="false"
+          class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white p-2 text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-600/30">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <circle cx="5" cy="5" r="1.7"/><circle cx="12" cy="5" r="1.7"/><circle cx="19" cy="5" r="1.7"/>
+            <circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/>
+            <circle cx="5" cy="19" r="1.7"/><circle cx="12" cy="19" r="1.7"/><circle cx="19" cy="19" r="1.7"/>
+          </svg>
+        </button>
+        <div id="waffle-menu" hidden class="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
+          <div id="waffle-linki" class="grid grid-cols-2 gap-2"></div>
+        </div>
+      </div>
+      <div id="akcje-sesji" class="flex items-center gap-2" hidden>
+        <button id="btn-dodaj" type="button"
+          class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600/40">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Dodaj
+        </button>
+        <button id="btn-wyloguj" type="button"
+          class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-600/30">
+          Wyloguj
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Ładowanie / błąd konfiguracji -->
+  <section id="widok-ladowanie" class="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
+    <span id="ladowanie-tekst">Ładowanie…</span>
+  </section>
+
+  <!-- Logowanie (strona widoczna tylko dla zalogowanych) -->
+  <section id="widok-logowania" hidden class="mx-auto w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <h2 class="text-lg font-semibold">Zaloguj się</h2>
+    <p class="mt-1 text-sm text-slate-500">Lista zadań jest dostępna tylko dla zalogowanych użytkowników.</p>
+    <form id="form-logowanie" class="mt-5 space-y-4" novalidate>
+      <div>
+        <label for="log-email" class="mb-1 block text-sm font-medium text-slate-700">E-mail</label>
+        <input id="log-email" type="email" autocomplete="email" required
+          class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20">
+      </div>
+      <div>
+        <label for="log-haslo" class="mb-1 block text-sm font-medium text-slate-700">Hasło</label>
+        <input id="log-haslo" type="password" autocomplete="current-password" required
+          class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20">
+      </div>
+      <p id="log-komunikat" hidden class="rounded-lg border px-3 py-2 text-sm" role="alert"></p>
+      <button id="log-submit" type="submit"
+        class="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600/40 disabled:opacity-60">
+        Zaloguj się
+      </button>
+    </form>
+  </section>
+
+  <!-- Aplikacja -->
+  <main id="widok-app" hidden class="space-y-6">
+
+    <p id="blad" hidden role="alert" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"></p>
+
+    <!-- Wskaźnik postępu -->
+    <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="flex items-center justify-between gap-4">
+        <h2 class="text-sm font-medium text-slate-600">Postęp</h2>
+        <p id="postep-proc" class="text-2xl font-semibold text-blue-600">0%</p>
+      </div>
+      <div class="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="postep-a11y">
+        <div id="postep-pasek" class="h-full rounded-full bg-blue-600 transition-all duration-300" style="width:0%"></div>
+      </div>
+      <div class="mt-4 grid grid-cols-2 gap-4">
+        <div>
+          <p id="postep-zrobione" class="text-2xl font-semibold text-emerald-600">0</p>
+          <p class="text-sm text-slate-500">zrobione</p>
+        </div>
+        <div>
+          <p id="postep-zostalo" class="text-2xl font-semibold text-slate-800">0</p>
+          <p class="text-sm text-slate-500">zostało</p>
+        </div>
+      </div>
+      <div id="postep-odznaki" class="mt-4 flex flex-wrap gap-2 empty:hidden"></div>
+    </section>
+
+    <!-- Zakładki -->
+    <div class="flex gap-6 border-b border-slate-200" role="tablist">
+      <button type="button" role="tab" data-zakladka="zadania" class="zakladka -mb-px border-b-2 px-1 pb-3 text-sm font-medium">Zadania</button>
+      <button type="button" role="tab" data-zakladka="historia" class="zakladka -mb-px border-b-2 px-1 pb-3 text-sm font-medium">Historia</button>
+    </div>
+
+    <!-- Zakładka: zadania -->
+    <section id="panel-zadania" class="space-y-4">
+      <div class="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <label for="f-szukaj" class="sr-only">Szukaj</label>
+          <input id="f-szukaj" type="search" placeholder="Szukaj zadania…"
+            class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20">
+        </div>
+        <div>
+          <label for="f-status" class="sr-only">Status</label>
+          <select id="f-status" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20">
+            <option value="wszystkie">Wszystkie</option>
+            <option value="do-zrobienia">Do zrobienia</option>
+            <option value="zrobione">Zrobione</option>
+          </select>
+        </div>
+        <div>
+          <label for="f-priorytet" class="sr-only">Priorytet</label>
+          <select id="f-priorytet" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20">
+            <option value="0">Każdy priorytet</option>
+            <option value="3">Wysoki</option>
+            <option value="2">Średni</option>
+            <option value="1">Niski</option>
+          </select>
+        </div>
+        <div>
+          <label for="f-sort" class="sr-only">Sortowanie</label>
+          <select id="f-sort" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20">
+            <option value="priorytet">Sortuj: priorytet</option>
+            <option value="termin">Sortuj: termin</option>
+            <option value="najnowsze">Sortuj: najnowsze</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="lista-zadan" class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"></div>
+    </section>
+
+    <!-- Zakładka: historia -->
+    <section id="panel-historia" hidden class="space-y-4">
+      <div id="lista-historii" class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"></div>
+    </section>
+  </main>
+</div>
+
+<!-- Modal: dodawanie / edycja -->
+<div id="modal-zadanie" hidden class="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/40 p-4">
+  <div class="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-lg" role="dialog" aria-modal="true" aria-labelledby="modal-tytul">
+    <h2 id="modal-tytul" class="text-lg font-semibold">Nowe zadanie</h2>
+    <form id="form-zadanie" class="mt-5 space-y-4" novalidate>
+      <div>
+        <label for="z-tytul" class="mb-1 block text-sm font-medium text-slate-700">Tytuł</label>
+        <input id="z-tytul" type="text" maxlength="200" required
+          class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20">
+      </div>
+      <div>
+        <label for="z-notatka" class="mb-1 block text-sm font-medium text-slate-700">Notatka</label>
+        <textarea id="z-notatka" rows="3"
+          class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label for="z-priorytet" class="mb-1 block text-sm font-medium text-slate-700">Priorytet</label>
+          <select id="z-priorytet" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20">
+            <option value="3">Wysoki</option>
+            <option value="2" selected>Średni</option>
+            <option value="1">Niski</option>
+          </select>
+        </div>
+        <div>
+          <label for="z-termin" class="mb-1 block text-sm font-medium text-slate-700">Termin</label>
+          <input id="z-termin" type="date"
+            class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20">
+        </div>
+      </div>
+      <p id="z-komunikat" hidden class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert"></p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" data-zamknij class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Anuluj</button>
+        <button id="z-submit" type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">Zapisz</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: usuwanie -->
+<div id="modal-usun" hidden class="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/40 p-4">
+  <div class="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 shadow-lg" role="dialog" aria-modal="true" aria-labelledby="usun-tytul">
+    <h2 id="usun-tytul" class="text-lg font-semibold">Usunąć zadanie?</h2>
+    <p id="usun-opis" class="mt-2 text-sm text-slate-600 break-words"></p>
+    <div class="mt-5 flex justify-end gap-2">
+      <button type="button" data-zamknij class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Anuluj</button>
+      <button id="usun-potwierdz" type="button" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60">Usuń</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== KONFIGURACJA =====
+const SUPABASE_URL = 'https://TWOJ-PROJEKT.supabase.co';
+const SUPABASE_ANON_KEY = 'TWOJ_KLUCZ_ANON';
+const KLUCZ_USTAWIEN = 'zadania_ustawienia_v1';
+const TABELA_ZADAN = 'zadania';
+const TABELA_HISTORII = 'zadania_historia';
+const LIMIT_HISTORII = 100;
+
+// Linki w przycisku-waflu (zmień adresy, jeśli trzeba)
+const LINKI_HUBA = [
+  { nazwa: 'Hub', url: 'https://kamilowebski.github.io/hub/' },
+  { nazwa: 'Rejestr', url: 'https://kamilowebski.github.io/rejestr/' },
+  { nazwa: 'Dziennik', url: 'https://kamilowebski.github.io/diary/' },
+  { nazwa: 'Todo', url: 'https://kamilowebski.github.io/todo/' }
+];
+
+const PRIORYTETY = {
+  3: { nazwa: 'Wysoki', klasa: 'bg-red-50 text-red-700 ring-red-200' },
+  2: { nazwa: 'Średni', klasa: 'bg-amber-50 text-amber-700 ring-amber-200' },
+  1: { nazwa: 'Niski', klasa: 'bg-sky-50 text-sky-700 ring-sky-200' }
+};
+
+const AKCJE = {
+  'dodano': { nazwa: 'Dodano', klasa: 'bg-sky-50 text-sky-700 ring-sky-200' },
+  'zmieniono': { nazwa: 'Zmieniono', klasa: 'bg-amber-50 text-amber-700 ring-amber-200' },
+  'zrobione': { nazwa: 'Zrobione', klasa: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  'przywrócono': { nazwa: 'Przywrócono', klasa: 'bg-slate-100 text-slate-700 ring-slate-200' },
+  'usunięto': { nazwa: 'Usunięto', klasa: 'bg-red-50 text-red-700 ring-red-200' }
+};
+
+const KLASA_ODZNAKI = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ';
+const KLASA_IKONA_BTN = 'rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600/30';
+
+// ===== STAN =====
+const state = {
+  uzytkownikId: null,
+  sesjaGotowa: false,
+  zakladka: 'zadania',
+  filtr: { status: 'wszystkie', priorytet: '0', sort: 'priorytet', szukaj: '' },
+  zadania: [],
+  historia: [],
+  edytowaneId: null,
+  doUsunieciaId: null
+};
+
+let sb = null;
+
+// ===== POMOCNICZE =====
+const $ = (id) => document.getElementById(id);
+
+function esc(t) {
+  return String(t == null ? '' : t).replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+function dzis() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function formatTermin(s) {
+  const [r, m, d] = s.split('-').map(Number);
+  return new Date(r, m - 1, d).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function formatCzas(iso) {
+  return new Date(iso).toLocaleString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function pokazBlad(tekst) {
+  const el = $('blad');
+  el.textContent = tekst || '';
+  el.hidden = !tekst;
+}
+
+function tlumaczBlad(err) {
+  const m = (err && err.message) || '';
+  if (/invalid login credentials/i.test(m)) return 'Nieprawidłowy e-mail lub hasło.';
+  if (/email not confirmed/i.test(m)) return 'Adres e-mail nie został jeszcze potwierdzony. Kliknij link z wiadomości.';
+  if (/valid email|invalid format/i.test(m)) return 'Podaj poprawny adres e-mail.';
+  if (/rate limit/i.test(m)) return 'Zbyt wiele prób. Spróbuj ponownie za chwilę.';
+  if (/failed to fetch|network/i.test(m)) return 'Brak połączenia z serwerem. Sprawdź internet.';
+  return m || 'Coś poszło nie tak. Spróbuj ponownie.';
+}
+
+// ===== USTAWIENIA (localStorage) =====
+function wczytajUstawienia() {
+  try {
+    const raw = localStorage.getItem(KLUCZ_USTAWIEN);
+    if (!raw) return;
+    const u = JSON.parse(raw);
+    if (u.filtr) {
+      Object.assign(state.filtr, {
+        status: u.filtr.status || 'wszystkie',
+        priorytet: u.filtr.priorytet || '0',
+        sort: u.filtr.sort || 'priorytet'
+      });
+    }
+    if (u.zakladka === 'zadania' || u.zakladka === 'historia') state.zakladka = u.zakladka;
+  } catch (e) { /* brak dostępu do localStorage */ }
+}
+
+function zapiszUstawienia() {
+  try {
+    localStorage.setItem(KLUCZ_USTAWIEN, JSON.stringify({
+      filtr: { status: state.filtr.status, priorytet: state.filtr.priorytet, sort: state.filtr.sort },
+      zakladka: state.zakladka
+    }));
+  } catch (e) { /* ignoruj */ }
+}
+
+// ===== WIDOKI =====
+function pokazWidok(nazwa) {
+  $('widok-ladowanie').hidden = nazwa !== 'ladowanie';
+  $('widok-logowania').hidden = nazwa !== 'logowanie';
+  $('widok-app').hidden = nazwa !== 'app';
+  $('akcje-sesji').hidden = nazwa !== 'app';
+}
+
+function ustawZakladke(nazwa) {
+  state.zakladka = nazwa;
+  $('panel-zadania').hidden = nazwa !== 'zadania';
+  $('panel-historia').hidden = nazwa !== 'historia';
+  document.querySelectorAll('.zakladka').forEach((b) => {
+    const aktywna = b.dataset.zakladka === nazwa;
+    b.setAttribute('aria-selected', aktywna ? 'true' : 'false');
+    b.className = 'zakladka -mb-px border-b-2 px-1 pb-3 text-sm font-medium ' +
+      (aktywna ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700');
+  });
+  zapiszUstawienia();
+}
+
+// ===== LOGOWANIE =====
+function komunikatLogowania(tekst, typ) {
+  const el = $('log-komunikat');
+  el.textContent = tekst || '';
+  el.hidden = !tekst;
+  el.className = 'rounded-lg border px-3 py-2 text-sm ' + (typ === 'info'
+    ? 'border-sky-200 bg-sky-50 text-sky-700'
+    : 'border-red-200 bg-red-50 text-red-700');
+}
+
+async function wyslijLogowanie(e) {
+  e.preventDefault();
+  const email = $('log-email').value.trim();
+  const haslo = $('log-haslo').value;
+  if (!email || !haslo) {
+    komunikatLogowania('Podaj e-mail i hasło.');
+    return;
+  }
+  $('log-submit').disabled = true;
+  komunikatLogowania('');
+  try {
+    const { error } = await sb.auth.signInWithPassword({ email, password: haslo });
+    if (error) komunikatLogowania(tlumaczBlad(error));
+  } catch (err) {
+    komunikatLogowania(tlumaczBlad(err));
+  }
+  $('log-submit').disabled = false;
+}
+
+function ustawSesje(sesja) {
+  const id = sesja && sesja.user ? sesja.user.id : null;
+  if (state.sesjaGotowa && id === state.uzytkownikId) return;
+  state.sesjaGotowa = true;
+  state.uzytkownikId = id;
+  if (id) {
+    $('uzytkownik').textContent = sesja.user.email || '';
+    $('uzytkownik').hidden = false;
+    pokazWidok('app');
+    ustawZakladke(state.zakladka);
+    odswiez();
+  } else {
+    state.zadania = [];
+    state.historia = [];
+    $('uzytkownik').hidden = true;
+    $('log-haslo').value = '';
+    pokazWidok('logowanie');
+  }
+}
+
+// ===== DANE (Supabase) =====
+async function ladujZadania() {
+  const { data, error } = await sb.from(TABELA_ZADAN).select('*').order('created_at', { ascending: false });
+  if (error) { pokazBlad('Nie udało się pobrać zadań: ' + tlumaczBlad(error)); return; }
+  state.zadania = data || [];
+  renderujZadania();
+  renderujPostep();
+}
+
+async function ladujHistorie() {
+  const { data, error } = await sb.from(TABELA_HISTORII).select('*')
+    .order('created_at', { ascending: false }).limit(LIMIT_HISTORII);
+  if (error) { pokazBlad('Nie udało się pobrać historii: ' + tlumaczBlad(error)); return; }
+  state.historia = data || [];
+  renderujHistorie();
+}
+
+async function odswiez() {
+  pokazBlad('');
+  await Promise.all([ladujZadania(), ladujHistorie()]);
+}
+
+async function zapiszZadanie(e) {
+  e.preventDefault();
+  const tytul = $('z-tytul').value.trim();
+  const komunikat = $('z-komunikat');
+  komunikat.hidden = true;
+  if (!tytul) {
+    komunikat.textContent = 'Wpisz tytuł zadania.';
+    komunikat.hidden = false;
+    return;
+  }
+  const dane = {
+    tytul,
+    notatka: $('z-notatka').value.trim() || null,
+    priorytet: Number($('z-priorytet').value),
+    termin: $('z-termin').value || null
+  };
+  $('z-submit').disabled = true;
+  const zapytanie = state.edytowaneId
+    ? sb.from(TABELA_ZADAN).update(dane).eq('id', state.edytowaneId)
+    : sb.from(TABELA_ZADAN).insert(dane);
+  const { error } = await zapytanie;
+  $('z-submit').disabled = false;
+  if (error) {
+    komunikat.textContent = 'Nie udało się zapisać: ' + tlumaczBlad(error);
+    komunikat.hidden = false;
+    return;
+  }
+  zamknijModale();
+  odswiez();
+}
+
+async function przelaczZrobione(id) {
+  const z = state.zadania.find((x) => x.id === id);
+  if (!z) return;
+  const nowe = !z.zrobione;
+  const { error } = await sb.from(TABELA_ZADAN)
+    .update({ zrobione: nowe, zrobione_at: nowe ? new Date().toISOString() : null })
+    .eq('id', id);
+  if (error) { pokazBlad('Nie udało się zmienić statusu: ' + tlumaczBlad(error)); return; }
+  odswiez();
+}
+
+async function usunZadanie() {
+  if (!state.doUsunieciaId) return;
+  $('usun-potwierdz').disabled = true;
+  const { error } = await sb.from(TABELA_ZADAN).delete().eq('id', state.doUsunieciaId);
+  $('usun-potwierdz').disabled = false;
+  if (error) {
+    zamknijModale();
+    pokazBlad('Nie udało się usunąć: ' + tlumaczBlad(error));
+    return;
+  }
+  zamknijModale();
+  odswiez();
+}
+
+// ===== RENDEROWANIE =====
+function renderujPostep() {
+  const razem = state.zadania.length;
+  const gotowe = state.zadania.filter((z) => z.zrobione).length;
+  const proc = razem ? Math.round((gotowe / razem) * 100) : 0;
+  $('postep-proc').textContent = proc + '%';
+  $('postep-pasek').style.width = proc + '%';
+  $('postep-a11y').setAttribute('aria-valuenow', String(proc));
+  $('postep-zrobione').textContent = gotowe;
+  $('postep-zostalo').textContent = razem - gotowe;
+
+  const dzisiaj = dzis();
+  const poTerminie = state.zadania.filter((z) => !z.zrobione && z.termin && z.termin < dzisiaj).length;
+  const wysokie = state.zadania.filter((z) => !z.zrobione && z.priorytet === 3).length;
+  let html = '';
+  if (poTerminie) html += '<span class="' + KLASA_ODZNAKI + 'bg-red-50 text-red-700 ring-red-200">Po terminie: ' + poTerminie + '</span>';
+  if (wysokie) html += '<span class="' + KLASA_ODZNAKI + 'bg-amber-50 text-amber-700 ring-amber-200">Wysoki priorytet: ' + wysokie + '</span>';
+  $('postep-odznaki').innerHTML = html;
+}
+
+function porownaj(a, b) {
+  // zrobione zawsze na końcu
+  if (a.zrobione !== b.zrobione) return a.zrobione ? 1 : -1;
+  const poTerminie = () => {
+    if (a.termin && b.termin) return a.termin < b.termin ? -1 : a.termin > b.termin ? 1 : 0;
+    if (a.termin) return -1;
+    if (b.termin) return 1;
+    return 0;
+  };
+  const poNajnowsze = () => (a.created_at < b.created_at ? 1 : -1);
+  if (state.filtr.sort === 'najnowsze') return poNajnowsze();
+  if (state.filtr.sort === 'termin') return poTerminie() || (b.priorytet - a.priorytet) || poNajnowsze();
+  return (b.priorytet - a.priorytet) || poTerminie() || poNajnowsze();
+}
+
+function przefiltrowane() {
+  const f = state.filtr;
+  const q = f.szukaj.trim().toLowerCase();
+  return state.zadania.filter((z) => {
+    if (f.status === 'do-zrobienia' && z.zrobione) return false;
+    if (f.status === 'zrobione' && !z.zrobione) return false;
+    if (f.priorytet !== '0' && String(z.priorytet) !== f.priorytet) return false;
+    if (q && !((z.tytul || '') + ' ' + (z.notatka || '')).toLowerCase().includes(q)) return false;
+    return true;
+  }).sort(porownaj);
+}
+
+function stanPusty(tytul, opis) {
+  return '<div class="px-6 py-10 text-center"><p class="text-sm font-medium text-slate-700">' + esc(tytul) +
+    '</p><p class="mt-1 text-sm text-slate-500">' + esc(opis) + '</p></div>';
+}
+
+function renderujZadania() {
+  const kontener = $('lista-zadan');
+  if (!state.zadania.length) {
+    kontener.innerHTML = stanPusty('Brak zadań', 'Dodaj pierwsze zadanie przyciskiem „Dodaj”.');
+    return;
+  }
+  const lista = przefiltrowane();
+  if (!lista.length) {
+    kontener.innerHTML = stanPusty('Nic nie pasuje', 'Zmień filtry lub wyszukiwanie.');
+    return;
+  }
+  const dzisiaj = dzis();
+  kontener.innerHTML = '<ul class="divide-y divide-slate-100">' + lista.map((z) => {
+    const p = PRIORYTETY[z.priorytet] || PRIORYTETY[2];
+    const poTerminie = !z.zrobione && z.termin && z.termin < dzisiaj;
+    const odznakaTermin = z.termin
+      ? '<span class="' + KLASA_ODZNAKI + (poTerminie ? 'bg-red-50 text-red-700 ring-red-200' : 'bg-slate-100 text-slate-600 ring-slate-200') + '">' +
+        (poTerminie ? 'Po terminie: ' : 'Termin: ') + esc(formatTermin(z.termin)) + '</span>'
+      : '';
+    const kolko = z.zrobione
+      ? 'border-emerald-500 bg-emerald-500 text-white'
+      : 'border-slate-300 text-transparent hover:border-blue-600';
+    return '<li class="flex items-start gap-3 px-4 py-3">' +
+      '<button type="button" data-akcja="przelacz" data-id="' + esc(z.id) + '" aria-label="' + (z.zrobione ? 'Oznacz jako do zrobienia' : 'Oznacz jako zrobione') + '"' +
+        ' class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600/30 ' + kolko + '">' +
+        '<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>' +
+      '</button>' +
+      '<div class="min-w-0 flex-1">' +
+        '<p class="break-words text-sm font-medium ' + (z.zrobione ? 'text-slate-400 line-through' : 'text-slate-800') + '">' + esc(z.tytul) + '</p>' +
+        (z.notatka ? '<p class="mt-0.5 whitespace-pre-line break-words text-sm text-slate-500">' + esc(z.notatka) + '</p>' : '') +
+        '<div class="mt-2 flex flex-wrap gap-2">' +
+          '<span class="' + KLASA_ODZNAKI + p.klasa + '">' + p.nazwa + '</span>' + odznakaTermin +
+        '</div>' +
+      '</div>' +
+      '<div class="flex shrink-0 gap-1">' +
+        '<button type="button" data-akcja="edytuj" data-id="' + esc(z.id) + '" aria-label="Edytuj" class="' + KLASA_IKONA_BTN + '">' +
+          '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>' +
+        '</button>' +
+        '<button type="button" data-akcja="usun" data-id="' + esc(z.id) + '" aria-label="Usuń" class="' + KLASA_IKONA_BTN + ' hover:text-red-600">' +
+          '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>' +
+        '</button>' +
+      '</div>' +
+    '</li>';
+  }).join('') + '</ul>';
+}
+
+function renderujHistorie() {
+  const kontener = $('lista-historii');
+  if (!state.historia.length) {
+    kontener.innerHTML = stanPusty('Historia jest pusta', 'Tu pojawią się dodane, zmienione, zrobione i usunięte zadania.');
+    return;
+  }
+  kontener.innerHTML = '<ul class="divide-y divide-slate-100">' + state.historia.map((h) => {
+    const a = AKCJE[h.akcja] || AKCJE['zmieniono'];
+    return '<li class="flex items-start justify-between gap-3 px-4 py-3">' +
+      '<div class="min-w-0 flex-1">' +
+        '<p class="break-words text-sm font-medium text-slate-800">' + esc(h.tytul) + '</p>' +
+        '<p class="mt-0.5 text-xs text-slate-500">' + esc(formatCzas(h.created_at)) + '</p>' +
+      '</div>' +
+      '<span class="shrink-0 ' + KLASA_ODZNAKI + a.klasa + '">' + a.nazwa + '</span>' +
+    '</li>';
+  }).join('') + '</ul>';
+}
+
+// ===== MODALE =====
+function otworzModalZadania(id) {
+  state.edytowaneId = id || null;
+  const z = id ? state.zadania.find((x) => x.id === id) : null;
+  $('modal-tytul').textContent = z ? 'Edytuj zadanie' : 'Nowe zadanie';
+  $('z-tytul').value = z ? z.tytul : '';
+  $('z-notatka').value = z && z.notatka ? z.notatka : '';
+  $('z-priorytet').value = z ? String(z.priorytet) : '2';
+  $('z-termin').value = z && z.termin ? z.termin : '';
+  $('z-komunikat').hidden = true;
+  $('modal-zadanie').hidden = false;
+  $('z-tytul').focus();
+}
+
+function otworzModalUsuwania(id) {
+  const z = state.zadania.find((x) => x.id === id);
+  if (!z) return;
+  state.doUsunieciaId = id;
+  $('usun-opis').textContent = '„' + z.tytul + '” zostanie usunięte. Wpis w historii pozostanie.';
+  $('modal-usun').hidden = false;
+}
+
+function zamknijModale() {
+  $('modal-zadanie').hidden = true;
+  $('modal-usun').hidden = true;
+  state.edytowaneId = null;
+  state.doUsunieciaId = null;
+}
+
+// ===== WAFEL =====
+function zamknijWafel() {
+  $('waffle-menu').hidden = true;
+  $('waffle-btn').setAttribute('aria-expanded', 'false');
+}
+
+function zbudujWafel() {
+  $('waffle-linki').innerHTML = LINKI_HUBA.map((l) =>
+    '<a href="' + esc(l.url) + '" class="rounded-lg border border-slate-200 px-3 py-3 text-center text-sm font-medium text-slate-700 hover:border-blue-600 hover:text-blue-600">' +
+    esc(l.nazwa) + '</a>'
+  ).join('');
+}
+
+// ===== ZDARZENIA =====
+function podepnijZdarzenia() {
+  $('form-logowanie').addEventListener('submit', wyslijLogowanie);
+  $('btn-wyloguj').addEventListener('click', async () => { await sb.auth.signOut(); });
+  $('btn-dodaj').addEventListener('click', () => otworzModalZadania(null));
+  $('form-zadanie').addEventListener('submit', zapiszZadanie);
+  $('usun-potwierdz').addEventListener('click', usunZadanie);
+
+  document.querySelectorAll('.zakladka').forEach((b) =>
+    b.addEventListener('click', () => ustawZakladke(b.dataset.zakladka)));
+
+  // filtry
+  $('f-szukaj').addEventListener('input', (e) => { state.filtr.szukaj = e.target.value; renderujZadania(); });
+  [['f-status', 'status'], ['f-priorytet', 'priorytet'], ['f-sort', 'sort']].forEach(([id, klucz]) => {
+    $(id).addEventListener('change', (e) => {
+      state.filtr[klucz] = e.target.value;
+      zapiszUstawienia();
+      renderujZadania();
+    });
+  });
+
+  // akcje na liście zadań
+  $('lista-zadan').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-akcja]');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    if (btn.dataset.akcja === 'przelacz') przelaczZrobione(id);
+    if (btn.dataset.akcja === 'edytuj') otworzModalZadania(id);
+    if (btn.dataset.akcja === 'usun') otworzModalUsuwania(id);
+  });
+
+  // zamykanie modali: przycisk Anuluj i kliknięcie w tło
+  document.querySelectorAll('[data-zamknij]').forEach((b) => b.addEventListener('click', zamknijModale));
+  ['modal-zadanie', 'modal-usun'].forEach((id) =>
+    $(id).addEventListener('click', (e) => { if (e.target === $(id)) zamknijModale(); }));
+
+  // wafel
+  $('waffle-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const otwarty = !$('waffle-menu').hidden;
+    $('waffle-menu').hidden = otwarty;
+    $('waffle-btn').setAttribute('aria-expanded', otwarty ? 'false' : 'true');
+  });
+  document.addEventListener('click', (e) => {
+    if (!$('waffle-menu').contains(e.target)) zamknijWafel();
+  });
+
+  // Esc zamyka modale i wafel
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { zamknijModale(); zamknijWafel(); }
+  });
+}
+
+// ===== START =====
+function start() {
+  zbudujWafel();
+  podepnijZdarzenia();
+  wczytajUstawienia();
+  $('f-status').value = state.filtr.status;
+  $('f-priorytet').value = state.filtr.priorytet;
+  $('f-sort').value = state.filtr.sort;
+
+  if (!window.supabase || SUPABASE_URL.includes('TWOJ') || SUPABASE_ANON_KEY.includes('TWOJ')) {
+    $('ladowanie-tekst').textContent = 'Uzupełnij SUPABASE_URL i SUPABASE_ANON_KEY na górze skryptu.';
+    return;
+  }
+
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // setTimeout: unikamy wywołań Supabase wewnątrz callbacku auth
+  sb.auth.onAuthStateChange((zdarzenie, sesja) => {
+    setTimeout(() => ustawSesje(sesja), 0);
+  });
+  sb.auth.getSession().then(({ data }) => ustawSesje(data.session));
+}
+
+start();
+</script>
+</body>
+</html>

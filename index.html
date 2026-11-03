@@ -4,63 +4,43 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lista zadań</title>
+<meta name="color-scheme" content="light">
 <meta name="theme-color" content="#f4f7f9">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="ikony/favicon.ico" sizes="any">
-<link rel="icon" type="image/png" sizes="32x32" href="ikony/favicon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="ikony/favicon-16.png">
-<link rel="apple-touch-icon" href="ikony/apple-touch-icon.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Zadania">
-<script src="https://cdn.tailwindcss.com"></script>
+<link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script src="https://cdn.tailwindcss.com/3.4.17?plugins=forms"></script>
 <script>
-  tailwind.config = {
-    theme: { extend: { colors: { page: '#f4f7f9' } } }
-  };
+tailwind.config = { theme: { extend: { colors: { page: '#f4f7f9' } } } };
 </script>
+<script src="https://kamilowebski.github.io/hub/apps.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
   [hidden] { display: none !important; }
 </style>
 </head>
-<body class="bg-page text-slate-800 min-h-screen">
+<body class="min-h-screen bg-page text-sm text-slate-900 antialiased">
 
 <div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
 
   <!-- Nagłówek -->
-  <header class="flex items-center justify-between gap-3">
-    <div class="min-w-0">
-      <h1 class="text-2xl font-semibold">Lista zadań</h1>
-      <p id="uzytkownik" class="text-sm text-slate-500 truncate" hidden></p>
-    </div>
-    <div class="flex items-center gap-2">
-      <!-- Przycisk-wafel: przejście do innych stron -->
-      <div class="relative">
-        <button id="waffle-btn" type="button" aria-label="Moje strony" aria-expanded="false"
-          class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white p-2 text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-600/30">
-          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <circle cx="5" cy="5" r="1.7"/><circle cx="12" cy="5" r="1.7"/><circle cx="19" cy="5" r="1.7"/>
-            <circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/>
-            <circle cx="5" cy="19" r="1.7"/><circle cx="12" cy="19" r="1.7"/><circle cx="19" cy="19" r="1.7"/>
-          </svg>
-        </button>
-        <div id="waffle-menu" hidden class="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
-          <div id="waffle-linki" class="grid grid-cols-2 gap-2"></div>
-        </div>
-      </div>
-      <div id="akcje-sesji" class="flex items-center gap-2" hidden>
-        <button id="btn-dodaj" type="button"
-          class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600/40">
-          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-          Dodaj
-        </button>
-        <button id="btn-wyloguj" type="button"
-          class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-600/30">
-          Wyloguj
-        </button>
-      </div>
-    </div>
-  </header>
+<header class="flex flex-wrap items-start justify-between gap-4">
+<div class="min-w-0">
+<h1 class="text-2xl font-semibold tracking-tight">Lista zadań</h1>
+<p id="licznik" class="text-sm text-slate-600"></p>
+<p id="uzytkownik" hidden class="mt-1 flex items-center gap-1.5 text-xs text-slate-600"><svg class="h-4 w-4 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span id="uzytkownik-email" class="min-w-0 truncate"></span></p>
+</div>
+<div class="flex flex-wrap items-center gap-2">
+<div id="akcje-sesji" class="flex flex-wrap items-center gap-2" hidden>
+<button id="btn-dodaj" type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-60 border-blue-600 bg-blue-600 text-white shadow-sm hover:border-blue-700 hover:bg-blue-700"><svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Dodaj</button>
+<button id="btn-wyloguj" type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-60 border-slate-300 bg-white text-slate-900 hover:bg-slate-50" title="Wyloguj"><svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg><span class="hidden sm:inline">Wyloguj</span></button>
+</div>
+<div id="hub-apps"></div>
+</div>
+</header>
 
   <!-- Ładowanie / błąd konfiguracji -->
   <section id="widok-ladowanie" class="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
@@ -68,23 +48,23 @@
   </section>
 
   <!-- Logowanie (strona widoczna tylko dla zalogowanych) -->
-  <section id="widok-logowania" hidden class="mx-auto w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+  <section id="widok-logowania" hidden class="mx-auto w-full max-w-md rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
     <h2 class="text-lg font-semibold">Zaloguj się</h2>
     <p class="mt-1 text-sm text-slate-500">Lista zadań jest dostępna tylko dla zalogowanych użytkowników.</p>
     <form id="form-logowanie" class="mt-5 space-y-4" novalidate>
       <div>
-        <label for="log-email" class="mb-1 block text-sm font-medium text-slate-700">E-mail</label>
+        <label for="log-email" class="mb-1.5 block text-[13px] font-medium text-slate-900">E-mail</label>
         <input id="log-email" type="email" autocomplete="email" required
           class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20">
       </div>
       <div>
-        <label for="log-haslo" class="mb-1 block text-sm font-medium text-slate-700">Hasło</label>
+        <label for="log-haslo" class="mb-1.5 block text-[13px] font-medium text-slate-900">Hasło</label>
         <input id="log-haslo" type="password" autocomplete="current-password" required
           class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20">
       </div>
       <p id="log-komunikat" hidden class="rounded-lg border px-3 py-2 text-sm" role="alert"></p>
       <button id="log-submit" type="submit"
-        class="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600/40 disabled:opacity-60">
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-60 border-blue-600 bg-blue-600 text-white shadow-sm hover:border-blue-700 hover:bg-blue-700 w-full">
         Zaloguj się
       </button>
     </form>
@@ -170,22 +150,22 @@
 
 <!-- Modal: dodawanie / edycja -->
 <div id="modal-zadanie" hidden class="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/40 p-4">
-  <div class="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-lg" role="dialog" aria-modal="true" aria-labelledby="modal-tytul">
+  <div class="max-h-[calc(100dvh-1rem)] w-full max-w-[560px] overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:p-6" role="dialog" aria-modal="true" aria-labelledby="modal-tytul">
     <h2 id="modal-tytul" class="text-lg font-semibold">Nowe zadanie</h2>
     <form id="form-zadanie" class="mt-5 space-y-4" novalidate>
       <div>
-        <label for="z-tytul" class="mb-1 block text-sm font-medium text-slate-700">Tytuł</label>
+        <label for="z-tytul" class="mb-1.5 block text-[13px] font-medium text-slate-900">Tytuł</label>
         <input id="z-tytul" type="text" maxlength="200" required
           class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20">
       </div>
       <div>
-        <label for="z-notatka" class="mb-1 block text-sm font-medium text-slate-700">Notatka</label>
+        <label for="z-notatka" class="mb-1.5 block text-[13px] font-medium text-slate-900">Notatka</label>
         <textarea id="z-notatka" rows="3"
           class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20"></textarea>
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label for="z-priorytet" class="mb-1 block text-sm font-medium text-slate-700">Priorytet</label>
+          <label for="z-priorytet" class="mb-1.5 block text-[13px] font-medium text-slate-900">Priorytet</label>
           <select id="z-priorytet" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20">
             <option value="3">Wysoki</option>
             <option value="2" selected>Średni</option>
@@ -193,15 +173,15 @@
           </select>
         </div>
         <div>
-          <label for="z-termin" class="mb-1 block text-sm font-medium text-slate-700">Termin</label>
+          <label for="z-termin" class="mb-1.5 block text-[13px] font-medium text-slate-900">Termin</label>
           <input id="z-termin" type="date"
             class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20">
         </div>
       </div>
       <p id="z-komunikat" hidden class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert"></p>
       <div class="flex justify-end gap-2 pt-2">
-        <button type="button" data-zamknij class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Anuluj</button>
-        <button id="z-submit" type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">Zapisz</button>
+        <button type="button" data-zamknij class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-60 border-slate-300 bg-white text-slate-900 hover:bg-slate-50">Anuluj</button>
+        <button id="z-submit" type="submit" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-60 border-blue-600 bg-blue-600 text-white shadow-sm hover:border-blue-700 hover:bg-blue-700">Zapisz</button>
       </div>
     </form>
   </div>
@@ -209,12 +189,12 @@
 
 <!-- Modal: usuwanie -->
 <div id="modal-usun" hidden class="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/40 p-4">
-  <div class="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 shadow-lg" role="dialog" aria-modal="true" aria-labelledby="usun-tytul">
+  <div class="w-full max-w-[400px] rounded-2xl bg-white p-4 shadow-xl sm:p-6" role="dialog" aria-modal="true" aria-labelledby="usun-tytul">
     <h2 id="usun-tytul" class="text-lg font-semibold">Usunąć zadanie?</h2>
     <p id="usun-opis" class="mt-2 text-sm text-slate-600 break-words"></p>
     <div class="mt-5 flex justify-end gap-2">
-      <button type="button" data-zamknij class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Anuluj</button>
-      <button id="usun-potwierdz" type="button" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60">Usuń</button>
+      <button type="button" data-zamknij class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-60 border-slate-300 bg-white text-slate-900 hover:bg-slate-50">Anuluj</button>
+      <button id="usun-potwierdz" type="button" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-60 border-red-600 bg-red-600 text-white hover:brightness-95">Usuń</button>
     </div>
   </div>
 </div>
@@ -227,14 +207,6 @@ const KLUCZ_USTAWIEN = 'zadania_ustawienia_v1';
 const TABELA_ZADAN = 'zadania';
 const TABELA_HISTORII = 'zadania_historia';
 const LIMIT_HISTORII = 100;
-
-// Linki w przycisku-waflu (zmień adresy, jeśli trzeba)
-const LINKI_HUBA = [
-  { nazwa: 'Hub', url: 'https://kamilowebski.github.io/hub/' },
-  { nazwa: 'Rejestr', url: 'https://kamilowebski.github.io/rejestr/' },
-  { nazwa: 'Dziennik', url: 'https://kamilowebski.github.io/diary/' },
-  { nazwa: 'Todo', url: 'https://kamilowebski.github.io/todo/' }
-];
 
 const PRIORYTETY = {
   3: { nazwa: 'Wysoki', klasa: 'bg-red-50 text-red-700 ring-red-200' },
@@ -388,7 +360,7 @@ function ustawSesje(sesja) {
   state.sesjaGotowa = true;
   state.uzytkownikId = id;
   if (id) {
-    $('uzytkownik').textContent = sesja.user.email || '';
+    $('uzytkownik-email').textContent = sesja.user.email || '';
     $('uzytkownik').hidden = false;
     pokazWidok('app');
     ustawZakladke(state.zakladka);
@@ -486,6 +458,7 @@ function renderujPostep() {
   const gotowe = state.zadania.filter((z) => z.zrobione).length;
   const proc = razem ? Math.round((gotowe / razem) * 100) : 0;
   $('postep-proc').textContent = proc + '%';
+$('licznik').textContent = razem + ' zadań, zrobione: ' + gotowe;
   $('postep-pasek').style.width = proc + '%';
   $('postep-a11y').setAttribute('aria-valuenow', String(proc));
   $('postep-zrobione').textContent = gotowe;
@@ -625,19 +598,6 @@ function zamknijModale() {
   state.doUsunieciaId = null;
 }
 
-// ===== WAFEL =====
-function zamknijWafel() {
-  $('waffle-menu').hidden = true;
-  $('waffle-btn').setAttribute('aria-expanded', 'false');
-}
-
-function zbudujWafel() {
-  $('waffle-linki').innerHTML = LINKI_HUBA.map((l) =>
-    '<a href="' + esc(l.url) + '" class="rounded-lg border border-slate-200 px-3 py-3 text-center text-sm font-medium text-slate-700 hover:border-blue-600 hover:text-blue-600">' +
-    esc(l.nazwa) + '</a>'
-  ).join('');
-}
-
 // ===== ZDARZENIA =====
 function podepnijZdarzenia() {
   $('form-logowanie').addEventListener('submit', wyslijLogowanie);
@@ -674,27 +634,15 @@ function podepnijZdarzenia() {
   ['modal-zadanie', 'modal-usun'].forEach((id) =>
     $(id).addEventListener('click', (e) => { if (e.target === $(id)) zamknijModale(); }));
 
-  // wafel
-  $('waffle-btn').addEventListener('click', (e) => {
-    e.stopPropagation();
-    const otwarty = !$('waffle-menu').hidden;
-    $('waffle-menu').hidden = otwarty;
-    $('waffle-btn').setAttribute('aria-expanded', otwarty ? 'false' : 'true');
-  });
-  document.addEventListener('click', (e) => {
-    if (!$('waffle-menu').contains(e.target)) zamknijWafel();
-  });
-
-  // Esc zamyka modale i wafel
+  // Esc zamyka modale
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { zamknijModale(); zamknijWafel(); }
+    if (e.key === 'Escape') { zamknijModale(); }
   });
 }
 
 // ===== START =====
 function start() {
-  zbudujWafel();
-  podepnijZdarzenia();
+    podepnijZdarzenia();
   wczytajUstawienia();
   $('f-status').value = state.filtr.status;
   $('f-priorytet').value = state.filtr.priorytet;
